@@ -38,15 +38,16 @@ const rotationProblems = [
         shape: {
             type: 'triangle',
             vertices: [
-                { x: -100, y: -50 },  // A
-                { x: 100, y: -50 },   // B
-                { x: 0, y: 100 }      // C (回転の中心)
+                { x: 100, y: -50 },  // A
+                { x: -100, y: -50 },   // B
+                { x: 0, y: 50 }      // C (回転の中心)
             ],
             labels: ['A', 'B', 'C'],
-            center: { x: 0, y: 100 }  // 点C
+            center: { x: 0, y: 50 }  // 点C
         },
         answer: 75,
-        hint: "回転の中心を正確に特定し、回転角度と対応する点の位置関係を把握しましょう。"
+        hint: "回転の中心を正確に特定し、回転角度と対応する点の位置関係を把握しましょう。",
+        choices: ["60°", "75°", "90°", "120°"]
     }
 ];
 
@@ -105,6 +106,13 @@ startRollingBtn.addEventListener('click', () => {
 
 // 回転シミュレータ
 let currentProblem = rotationProblems[0];
+let isAnimating = false;
+let animationId = null;
+let currentRotationAngle = 0;
+let paths = {
+    A: [],
+    B: []
+};
 
 function drawRotationShape() {
     const canvas = rotationCanvas;
@@ -123,10 +131,18 @@ function drawRotationShape() {
     drawGrid(ctx, canvas.width / scale, canvas.height / scale);
     
     // 回転角度を取得
-    const angle = parseFloat(rotationAngle.value);
+    const angle = isAnimating ? currentRotationAngle : parseFloat(rotationAngle.value);
     
     // 回転前の図形を描画（薄い色）
-    drawShape(ctx, currentProblem.shape, 'rgba(0, 0, 0, 0.2)', false);
+    drawShape(ctx, currentProblem.shape, 'rgba(0, 0, 255, 0.2)', true);
+    
+    // 軌跡を描画
+    if (paths.A.length > 0) {
+        drawPath(ctx, paths.A, 'rgba(255, 0, 0, 0.5)');
+    }
+    if (paths.B.length > 0) {
+        drawPath(ctx, paths.B, 'rgba(0, 255, 0, 0.5)');
+    }
     
     // 回転後の図形を描画
     drawRotatedShape(ctx, currentProblem.shape, angle);
@@ -172,7 +188,18 @@ function drawGrid(ctx, width, height) {
     ctx.stroke();
 }
 
-function drawShape(ctx, shape, color, fill = true) {
+function drawPath(ctx, path, color) {
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    for (let i = 1; i < path.length; i++) {
+        ctx.lineTo(path[i].x, path[i].y);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function drawShape(ctx, shape, color, showLabels = true) {
     ctx.beginPath();
     ctx.moveTo(shape.vertices[0].x, shape.vertices[0].y);
     for (let i = 1; i < shape.vertices.length; i++) {
@@ -180,26 +207,26 @@ function drawShape(ctx, shape, color, fill = true) {
     }
     ctx.closePath();
     
-    if (fill) {
-        ctx.fillStyle = color;
-        ctx.fill();
-    }
+    ctx.fillStyle = color;
+    ctx.fill();
     ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    // 頂点のラベルを描画
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#333';
-    shape.vertices.forEach((vertex, i) => {
-        ctx.fillText(shape.labels[i], vertex.x + 10, vertex.y + 10);
-    });
+    if (showLabels) {
+        // 頂点のラベルを描画
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#000';
+        shape.vertices.forEach((vertex, i) => {
+            ctx.fillText(shape.labels[i], vertex.x + 10, vertex.y + 10);
+        });
+    }
 }
 
 function drawRotatedShape(ctx, shape, angle) {
     const rad = angle * Math.PI / 180;
     const center = shape.center;
     
-    ctx.beginPath();
     const rotatedVertices = shape.vertices.map(vertex => {
         const dx = vertex.x - center.x;
         const dy = vertex.y - center.y;
@@ -209,20 +236,28 @@ function drawRotatedShape(ctx, shape, angle) {
         };
     });
 
+    // 軌跡を記録
+    if (isAnimating) {
+        paths.A.push(rotatedVertices[0]);
+        paths.B.push(rotatedVertices[1]);
+    }
+
+    ctx.beginPath();
     ctx.moveTo(rotatedVertices[0].x, rotatedVertices[0].y);
     for (let i = 1; i < rotatedVertices.length; i++) {
         ctx.lineTo(rotatedVertices[i].x, rotatedVertices[i].y);
     }
     ctx.closePath();
     
-    ctx.fillStyle = 'rgba(74, 111, 165, 0.3)';
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
     ctx.fill();
-    ctx.strokeStyle = '#4a6fa5';
+    ctx.strokeStyle = '#f00';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     // 回転後の頂点のラベルを描画
     ctx.font = '16px Arial';
-    ctx.fillStyle = '#4a6fa5';
+    ctx.fillStyle = '#f00';
     rotatedVertices.forEach((vertex, i) => {
         const label = shape.labels[i];
         ctx.fillText(label + "'", vertex.x + 10, vertex.y + 10);
@@ -243,13 +278,43 @@ function drawAngleLabel(ctx, angle) {
     ctx.fillText(`${angle}°`, 0, -160);
 }
 
+function startAnimation() {
+    if (isAnimating) return;
+    
+    isAnimating = true;
+    paths = { A: [], B: [] };
+    currentRotationAngle = 0;
+    
+    function animate() {
+        if (currentRotationAngle >= 75) {
+            isAnimating = false;
+            cancelAnimationFrame(animationId);
+            return;
+        }
+        
+        currentRotationAngle += 1;
+        drawRotationShape();
+        animationId = requestAnimationFrame(animate);
+    }
+    
+    animationId = requestAnimationFrame(animate);
+}
+
 // イベントリスナー
 rotationAngle.addEventListener('input', () => {
-    angleValue.textContent = rotationAngle.value;
-    drawRotationShape();
+    if (!isAnimating) {
+        angleValue.textContent = rotationAngle.value;
+        drawRotationShape();
+    }
 });
 
 resetRotationBtn.addEventListener('click', () => {
+    isAnimating = false;
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+    paths = { A: [], B: [] };
+    currentRotationAngle = 0;
     rotationAngle.value = 0;
     angleValue.textContent = '0';
     drawRotationShape();
