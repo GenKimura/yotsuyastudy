@@ -29,17 +29,39 @@ const resetRollingBtn = document.getElementById('reset-rolling');
 const rotationCtx = rotationCanvas.getContext('2d');
 const rollingCtx = rollingCanvas.getContext('2d');
 
+// 例題データ
+const rotationProblems = [
+    {
+        id: 1,
+        title: "例題1: 点を中心とした回転",
+        description: "三角形ABCがあり、点Cを中心に75°回転させました。回転後の角A'CBの大きさを求めなさい。",
+        shape: {
+            type: 'triangle',
+            vertices: [
+                { x: -100, y: -50 },  // A
+                { x: 100, y: -50 },   // B
+                { x: 0, y: 100 }      // C (回転の中心)
+            ],
+            labels: ['A', 'B', 'C'],
+            center: { x: 0, y: 100 }  // 点C
+        },
+        answer: 75,
+        hint: "回転の中心を正確に特定し、回転角度と対応する点の位置関係を把握しましょう。"
+    }
+];
+
 // キャンバスのサイズ設定
 function resizeCanvas(canvas) {
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
 }
 
 // 初期化時にキャンバスサイズを設定
 window.addEventListener('load', () => {
     resizeCanvas(rotationCanvas);
     resizeCanvas(rollingCanvas);
+    drawRotationShape();
+    drawRollingShape();
 });
 
 // ウィンドウリサイズ時にキャンバスサイズを再設定
@@ -51,42 +73,26 @@ window.addEventListener('resize', () => {
 });
 
 // ナビゲーション
-homeLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    showSection(homeSection);
-});
-
-rotationLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    showSection(rotationSection);
-});
-
-rollingLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    showSection(rollingSection);
-});
-
-aboutLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    showSection(aboutSection);
-});
-
-// セクション表示関数
 function showSection(section) {
-    // すべてのセクションを非表示
-    homeSection.classList.remove('active-section');
-    homeSection.classList.add('hidden-section');
-    rotationSection.classList.remove('active-section');
-    rotationSection.classList.add('hidden-section');
-    rollingSection.classList.remove('active-section');
-    rollingSection.classList.add('hidden-section');
-    aboutSection.classList.remove('active-section');
-    aboutSection.classList.add('hidden-section');
-    
-    // 指定されたセクションを表示
+    [homeSection, rotationSection, rollingSection, aboutSection].forEach(s => {
+        s.classList.remove('active-section');
+        s.classList.add('hidden-section');
+    });
     section.classList.remove('hidden-section');
     section.classList.add('active-section');
 }
+
+[
+    [homeLink, homeSection],
+    [rotationLink, rotationSection],
+    [rollingLink, rollingSection],
+    [aboutLink, aboutSection]
+].forEach(([link, section]) => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSection(section);
+    });
+});
 
 // ホーム画面のボタン
 startRotationBtn.addEventListener('click', () => {
@@ -98,94 +104,158 @@ startRollingBtn.addEventListener('click', () => {
 });
 
 // 回転シミュレータ
-let rotationShape = {
-    type: 'triangle',
-    vertices: [
-        { x: 0, y: 0 },
-        { x: 100, y: 0 },
-        { x: 50, y: 86.6 }
-    ],
-    center: { x: 50, y: 28.87 }
-};
+let currentProblem = rotationProblems[0];
 
 function drawRotationShape() {
+    const canvas = rotationCanvas;
+    const ctx = rotationCtx;
+    const scale = Math.min(canvas.width, canvas.height) / 400;
+
     // キャンバスをクリア
-    rotationCtx.clearRect(0, 0, rotationCanvas.width, rotationCanvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // 座標系を中央に移動
-    rotationCtx.save();
-    rotationCtx.translate(rotationCanvas.width / 2, rotationCanvas.height / 2);
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(scale, scale);
+
+    // グリッドを描画
+    drawGrid(ctx, canvas.width / scale, canvas.height / scale);
     
     // 回転角度を取得
     const angle = parseFloat(rotationAngle.value);
     
     // 回転前の図形を描画（薄い色）
-    rotationCtx.beginPath();
-    rotationCtx.moveTo(rotationShape.vertices[0].x - rotationShape.center.x, rotationShape.vertices[0].y - rotationShape.center.y);
-    for (let i = 1; i < rotationShape.vertices.length; i++) {
-        rotationCtx.lineTo(rotationShape.vertices[i].x - rotationShape.center.x, rotationShape.vertices[i].y - rotationShape.center.y);
-    }
-    rotationCtx.closePath();
-    rotationCtx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-    rotationCtx.stroke();
+    drawShape(ctx, currentProblem.shape, 'rgba(0, 0, 0, 0.2)', false);
     
     // 回転後の図形を描画
-    rotationCtx.beginPath();
-    for (let i = 0; i < rotationShape.vertices.length; i++) {
-        const x = rotationShape.vertices[i].x - rotationShape.center.x;
-        const y = rotationShape.vertices[i].y - rotationShape.center.y;
-        
-        // 回転行列を適用
-        const rad = angle * Math.PI / 180;
-        const rotatedX = x * Math.cos(rad) - y * Math.sin(rad);
-        const rotatedY = x * Math.sin(rad) + y * Math.cos(rad);
-        
-        if (i === 0) {
-            rotationCtx.moveTo(rotatedX, rotatedY);
-        } else {
-            rotationCtx.lineTo(rotatedX, rotatedY);
-        }
-    }
-    rotationCtx.closePath();
-    rotationCtx.fillStyle = 'rgba(74, 111, 165, 0.3)';
-    rotationCtx.fill();
-    rotationCtx.strokeStyle = '#4a6fa5';
-    rotationCtx.stroke();
+    drawRotatedShape(ctx, currentProblem.shape, angle);
     
     // 回転の中心を描画
-    rotationCtx.beginPath();
-    rotationCtx.arc(0, 0, 5, 0, Math.PI * 2);
-    rotationCtx.fillStyle = '#4a6fa5';
-    rotationCtx.fill();
+    drawRotationCenter(ctx, currentProblem.shape.center);
     
     // 角度を表示
-    rotationCtx.font = '16px Arial';
-    rotationCtx.fillStyle = '#333';
-    rotationCtx.textAlign = 'center';
-    rotationCtx.fillText(`${angle}°`, 0, -20);
-    
-    rotationCtx.restore();
+    drawAngleLabel(ctx, angle);
+
+    ctx.restore();
 }
 
-// 回転角度の変更
+function drawGrid(ctx, width, height) {
+    const gridSize = 20;
+    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+    ctx.lineWidth = 0.5;
+
+    // 垂直線
+    for (let x = -width/2; x < width/2; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, -height/2);
+        ctx.lineTo(x, height/2);
+        ctx.stroke();
+    }
+
+    // 水平線
+    for (let y = -height/2; y < height/2; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(-width/2, y);
+        ctx.lineTo(width/2, y);
+        ctx.stroke();
+    }
+
+    // 座標軸
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-width/2, 0);
+    ctx.lineTo(width/2, 0);
+    ctx.moveTo(0, -height/2);
+    ctx.lineTo(0, height/2);
+    ctx.stroke();
+}
+
+function drawShape(ctx, shape, color, fill = true) {
+    ctx.beginPath();
+    ctx.moveTo(shape.vertices[0].x, shape.vertices[0].y);
+    for (let i = 1; i < shape.vertices.length; i++) {
+        ctx.lineTo(shape.vertices[i].x, shape.vertices[i].y);
+    }
+    ctx.closePath();
+    
+    if (fill) {
+        ctx.fillStyle = color;
+        ctx.fill();
+    }
+    ctx.strokeStyle = color;
+    ctx.stroke();
+
+    // 頂点のラベルを描画
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#333';
+    shape.vertices.forEach((vertex, i) => {
+        ctx.fillText(shape.labels[i], vertex.x + 10, vertex.y + 10);
+    });
+}
+
+function drawRotatedShape(ctx, shape, angle) {
+    const rad = angle * Math.PI / 180;
+    const center = shape.center;
+    
+    ctx.beginPath();
+    const rotatedVertices = shape.vertices.map(vertex => {
+        const dx = vertex.x - center.x;
+        const dy = vertex.y - center.y;
+        return {
+            x: center.x + dx * Math.cos(rad) - dy * Math.sin(rad),
+            y: center.y + dx * Math.sin(rad) + dy * Math.cos(rad)
+        };
+    });
+
+    ctx.moveTo(rotatedVertices[0].x, rotatedVertices[0].y);
+    for (let i = 1; i < rotatedVertices.length; i++) {
+        ctx.lineTo(rotatedVertices[i].x, rotatedVertices[i].y);
+    }
+    ctx.closePath();
+    
+    ctx.fillStyle = 'rgba(74, 111, 165, 0.3)';
+    ctx.fill();
+    ctx.strokeStyle = '#4a6fa5';
+    ctx.stroke();
+
+    // 回転後の頂点のラベルを描画
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#4a6fa5';
+    rotatedVertices.forEach((vertex, i) => {
+        const label = shape.labels[i];
+        ctx.fillText(label + "'", vertex.x + 10, vertex.y + 10);
+    });
+}
+
+function drawRotationCenter(ctx, center) {
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#4a6fa5';
+    ctx.fill();
+}
+
+function drawAngleLabel(ctx, angle) {
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#333';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${angle}°`, 0, -160);
+}
+
+// イベントリスナー
 rotationAngle.addEventListener('input', () => {
     angleValue.textContent = rotationAngle.value;
     drawRotationShape();
 });
 
-// 回転速度の変更
-rotationSpeed.addEventListener('change', () => {
-    // 速度に応じたアニメーション処理（実装予定）
-});
-
-// 回転リセット
 resetRotationBtn.addEventListener('click', () => {
     rotationAngle.value = 0;
     angleValue.textContent = '0';
     drawRotationShape();
 });
 
-// 転がりシミュレータ
+// 転がりシミュレータ（既存のコード）
 let rollingShape = {
     type: 'square',
     size: 50,
@@ -243,18 +313,11 @@ function drawRollingShape() {
     rollingCtx.fillText(`${distance}cm`, x, y - rollingShape.size);
 }
 
-// 移動距離の変更
 rollingDistance.addEventListener('input', () => {
     distanceValue.textContent = rollingDistance.value;
     drawRollingShape();
 });
 
-// 転がり速度の変更
-rollingSpeed.addEventListener('change', () => {
-    // 速度に応じたアニメーション処理（実装予定）
-});
-
-// 転がりリセット
 resetRollingBtn.addEventListener('click', () => {
     rollingDistance.value = 0;
     distanceValue.textContent = '0';

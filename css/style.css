@@ -181,4 +181,76 @@ footer {
     .controls {
         flex: 1;
     }
+}
+
+/* 問題コンテナ */
+.problem-container {
+    background-color: #f8f9fa;
+    border-left: 4px solid #4a6fa5;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.problem-container h3 {
+    color: #4a6fa5;
+    margin-bottom: 0.5rem;
+}
+
+.problem-container p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+/* 解答グループ */
+.answer-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.answer-group input[type="number"] {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100px;
+}
+
+.answer-group button {
+    padding: 0.5rem 1rem;
+}
+
+/* ヒントグループ */
+.hint-group {
+    margin: 1rem 0;
+}
+
+.hint-group button {
+    width: 100%;
+    background-color: #6c757d;
+}
+
+.hint-group button:hover {
+    background-color: #5a6268;
+}
+
+.hint-group p {
+    margin-top: 0.5rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-style: italic;
+}
+
+.hint-group p.hidden {
+    display: none;
+}
+
+/* キャンバスコンテナの調整 */
+.canvas-container {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    min-height: 400px;
 } 
